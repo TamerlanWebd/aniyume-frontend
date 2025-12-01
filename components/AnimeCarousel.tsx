@@ -1,21 +1,17 @@
 'use client';
 
 import Slider, { Settings } from "react-slick";
-import { useState, CSSProperties, MouseEventHandler } from "react";
-import "slick-carousel/slick/slick.css"; 
+import { useState, CSSProperties, MouseEventHandler, useEffect } from "react";
+import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+import { fetchTrendingAnime } from "@/lib/api/animeApi";
+import { Anime } from "@/lib/api/types";
 
 interface AnimeItem {
   id: number;
   src: string;
   alt: string;
 }
-
-const animeList: AnimeItem[] = Array.from({ length: 10 }, (_, i) => ({
-  id: i + 1,
-  src: `/images/anime.jpg`, 
-  alt: `Аниме ${i + 1}`
-}));
 
 interface ArrowProps {
   className?: string;
@@ -25,7 +21,7 @@ interface ArrowProps {
 
 function PrevArrow({ onClick }: ArrowProps) {
   return (
-    <div 
+    <div
       className="absolute left-[-60px] top-1/2 -translate-y-1/2 cursor-pointer z-20 hover:scale-125 transition-transform"
       onClick={onClick}
     >
@@ -38,7 +34,7 @@ function PrevArrow({ onClick }: ArrowProps) {
 
 function NextArrow({ onClick }: ArrowProps) {
   return (
-    <div 
+    <div
       className="absolute right-[-60px] top-1/2 -translate-y-1/2 cursor-pointer z-20 hover:scale-125 transition-transform"
       onClick={onClick}
     >
@@ -51,13 +47,49 @@ function NextArrow({ onClick }: ArrowProps) {
 
 export default function AnimeCarousel() {
   const [current, setCurrent] = useState<number>(0);
+  const [animeList, setAnimeList] = useState<AnimeItem[]>([]);
+
+  useEffect(() => {
+    const loadAnime = async () => {
+      try {
+        console.log('🔄 Fetching trending anime...');
+        const response = await fetchTrendingAnime();
+        console.log('📦 Response:', response);
+        console.log('📊 Response data:', response.data);
+
+        const data = response.data;
+        if (Array.isArray(data) && data.length > 0) {
+          console.log(`✅ Found ${data.length} anime items`);
+          const items = data.map((anime: Anime) => {
+            console.log('Anime item:', anime);
+            return {
+              id: anime.id,
+              src: anime.cover_image || anime.banner_image || '/images/anime.jpg',
+              alt: anime.title_romaji || anime.title_english || 'Anime'
+            };
+          });
+          console.log('🎨 Mapped items:', items);
+          setAnimeList(items);
+        } else {
+          console.error('❌ Data is not an array or is empty:', data);
+        }
+      } catch (error) {
+        console.error("❌ Failed to fetch trending anime", error);
+      }
+    };
+    loadAnime();
+  }, []);
+
+  if (animeList.length === 0) {
+    return null; // or loading state
+  }
 
   const settings: Settings = {
     className: "center",
     centerMode: true,
     infinite: true,
     centerPadding: "0px",
-    slidesToShow: 5,
+    slidesToShow: Math.min(5, animeList.length),
     speed: 800,
     autoplay: true,
     autoplaySpeed: 3000,
@@ -71,7 +103,7 @@ export default function AnimeCarousel() {
       {
         breakpoint: 1024,
         settings: {
-          slidesToShow: 3,
+          slidesToShow: Math.min(3, animeList.length),
         }
       },
       {
@@ -85,7 +117,7 @@ export default function AnimeCarousel() {
 
   const getSlideStyles = (index: number): CSSProperties => {
     const totalItems = animeList.length;
-    
+
     let distance = Math.abs(current - index);
     if (distance > totalItems / 2) {
       distance = totalItems - distance;
@@ -101,7 +133,7 @@ export default function AnimeCarousel() {
     let xOffset = 0;
 
     if (distance === 0) {
-      scale = 1.3; 
+      scale = 1.3;
       zIndex = 10;
       opacity = 1;
       filter = 'brightness(1.1)';
@@ -117,9 +149,9 @@ export default function AnimeCarousel() {
       opacity = 1;
       xOffset = 50;
     } else {
-      scale = 0.65; 
+      scale = 0.65;
       zIndex = 1;
-      opacity = 0.6; 
+      opacity = 0.6;
       xOffset = 0;
     }
 
@@ -128,7 +160,7 @@ export default function AnimeCarousel() {
       opacity: opacity,
       zIndex: zIndex,
       filter: filter,
-      transition: 'all 0.8s cubic-bezier(0.25, 0.8, 0.25, 1)', 
+      transition: 'all 0.8s cubic-bezier(0.25, 0.8, 0.25, 1)',
     };
   };
 
@@ -137,16 +169,16 @@ export default function AnimeCarousel() {
       <Slider {...settings}>
         {animeList.map((anime, index) => {
           const styles = getSlideStyles(index);
-          
+
           return (
             <div key={anime.id} className="py-16 px-2 outline-none">
-              <div 
+              <div
                 className="mx-auto bg-white rounded-2xl overflow-hidden shadow-2xl relative"
                 style={{
-                    ...styles,
-                    width: '100%',
-                    maxWidth: '300px',
-                    aspectRatio: '3/4',
+                  ...styles,
+                  width: '100%',
+                  maxWidth: '300px',
+                  aspectRatio: '3/4',
                 }}
               >
                 <img

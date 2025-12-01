@@ -18,7 +18,8 @@ import {
   FaSmile
 } from 'react-icons/fa';
 import SeriesDropdown from '@/components/SeriesDropdown';
-import { fetchAnime, Anime } from '@/lib/api';
+import { fetchAnimeById } from '@/lib/api/animeApi';
+import { Anime } from '@/lib/api/types';
 
 interface Episode {
   num: number;
@@ -43,12 +44,24 @@ export default function AnimeViewPage() {
       if (!id) return;
       setLoading(true);
       try {
-        const data = await fetchAnime(id as string);
-        setAnime(data);
+        const numericId = parseInt(id as string, 10);
+        if (isNaN(numericId)) {
+          setError('Invalid anime ID');
+          setLoading(false);
+          return;
+        }
+        console.log('🔄 Fetching anime by ID:', numericId);
+        const response = await fetchAnimeById(numericId);
+        console.log('📦 Anime detail response:', response);
+        console.log('📊 Anime detail data:', response.data);
+
+        const animeData = response.data.data || response.data;
+        console.log('🎬 Anime object:', animeData);
+        setAnime(animeData);
         // Mock episodes for now as they are not in DB yet
         setCurrentEpisode({ num: 1, title: 'Серия 1', videoUrl: 'https://www.youtube.com/embed/D9iTQRB4XRk?si=xyz' });
       } catch (err) {
-        console.error(err);
+        console.error('❌ Failed to load anime:', err);
         setError('Failed to load anime');
       } finally {
         setLoading(false);
@@ -95,7 +108,7 @@ export default function AnimeViewPage() {
       <div className="relative w-full min-h-[85vh] md:min-h-[60vh] flex items-center">
         <div className="absolute inset-0 z-0 overflow-hidden">
           <img
-            src={anime.cover_image_large || anime.cover_image_medium}
+            src={anime.cover_image || anime.banner_image || '/images/anime.jpg'}
             alt={anime.title_romaji}
             className="w-full h-full object-cover object-top scale-105"
           />
@@ -112,15 +125,15 @@ export default function AnimeViewPage() {
 
             <div className="flex flex-wrap items-center gap-4 text-sm md:text-base font-medium text-gray-700 mb-6">
               <span className="bg-gray-200 text-black px-2 py-0.5 rounded border border-gray-900">
-                {anime.ageRating || '16+'}
+                16+
               </span>
 
               <ul className="flex items-center gap-2 list-none">
-                {anime.genres?.map((tag: string, i: number) => (
+                {anime.genres?.map((genre: any, i: number) => (
                   <li key={i} className="flex items-center">
                     {i > 0 && <span className="mr-2 text-gray-900">•</span>}
                     <a href="#" className="hover:underline hover:text-black transition-colors">
-                      {tag}
+                      {typeof genre === 'string' ? genre : genre.name}
                     </a>
                   </li>
                 ))}
@@ -190,14 +203,16 @@ export default function AnimeViewPage() {
           </div>
 
           <div className="relative w-full aspect-video rounded-xl overflow-hidden shadow-2xl border border-gray-300 bg-white">
-            <iframe
-              className="absolute top-0 left-0 w-full h-full"
-              src={currentEpisode.videoUrl}
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              title={`Серия ${currentEpisode.num}`}>
-            </iframe>
+            {currentEpisode && (
+              <iframe
+                className="absolute top-0 left-0 w-full h-full"
+                src={currentEpisode.videoUrl}
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                title={`Серия ${currentEpisode.num}`}>
+              </iframe>
+            )}
           </div>
         </div>
 
